@@ -1,0 +1,32 @@
+{
+  "chain": {
+    "name": "Cadena",
+    "sprite": "chain",
+    "cost": 30,
+    "placeOn": "path",
+    "radius": 10,
+    "uses": 15,
+    "effects": [
+      {
+        "type": "slow",
+        "factor": 0.4,
+        "duration": 2
+      }
+    ]
+  },
+  "fireship": {
+    "name": "Brulote",
+    "sprite": "fireship",
+    "cost": 60,
+    "placeOn": "path",
+    "radius": 10,
+    "uses": 1,
+    "effects": [
+      {
+        "type": "explode",
+        "amount": 120,
+        "radius": 35
+      }
+    ]
+  }
+}

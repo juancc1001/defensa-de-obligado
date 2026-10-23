@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Editor de mapas - Defensa de Obligado</title>
+    <style>
+      body { margin: 0; display: flex; height: 100vh; font: 13px monospace; background: #222; color: #eee; }
+      aside { width: 260px; padding: 8px; overflow-y: auto; background: #111; }
+      main { flex: 1; overflow: auto; padding: 8px; }
+      h3 { margin: 12px 0 4px; }
+      ul { margin: 0; padding-left: 16px; }
+      li { cursor: pointer; }
+      input { width: 50px; }
+      #name { width: 150px; }
+      .palette { display: flex; flex-wrap: wrap; gap: 4px; }
+      .palette div { width: 76px; text-align: center; font-size: 11px; cursor: grab; }
+      #level-name { width: 200px; }
+      .wave { margin: 8px 0; padding: 8px; background: #2c2c2c; }
+      .group { margin: 4px 0 4px 16px; }
+      #login { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #222; }
+      #login input { width: 200px; }
+    </style>
+  </head>
+  <body>
+    <aside>
+      <h3>Mapas</h3>
+      <ul id="maps"></ul>
+
+      <h3>Mapa actual</h3>
+      <p><label>Nombre <input id="name" value="mapa-nuevo" /></label></p>
+      <p>
+        <label>Ancho <input id="width" type="number" min="1" value="30" /></label>
+        <label>Alto <input id="height" type="number" min="1" value="17" /></label>
+      </p>
+      <p>
+        <button id="new">Nuevo</button>
+        <button id="resize">Redimensionar</button>
+        <button id="save">Guardar</button>
+      </p>
+      <p>Arrastrá sobre el mapa. Arrastrá lo colocado para moverlo. Clic derecho quita una torre / barco / entrada / cadenas.</p>
+
+      <div id="palette"></div>
+    </aside>
+    <main>
+      <canvas id="map"></canvas>
+
+      <h3>Nivel</h3>
+      <p>
+        <label>Nombre del nivel <input id="level-name" /></label>
+        <label>Oro inicial <input id="gold" type="number" /></label>
+        <label>Vida de las cadenas <input id="chains-hp" type="number" /></label>
+      </p>
+      <h3>Oleadas</h3>
+      <div id="waves"></div>
+    </main>
+    <script type="module" src="/src/editor/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "brig": {
+    "name": "Bergantín",
+    "sprite": "brig",
+    "hp": 60,
+    "speed": 20,
+    "armor": 0,
+    "reward": 8,
+    "damage": 1,
+    "movement": "path"
+  },
+  "steamer": {
+    "name": "Lanchón",
+    "sprite": "steamer",
+    "hp": 250,
+    "speed": 12,
+    "armor": 5,
+    "reward": 30,
+    "damage": 3,
+    "movement": "path"
+  }
+}

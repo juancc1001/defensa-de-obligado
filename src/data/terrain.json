@@ -1,0 +1,17 @@
+{
+  "floor": {
+    "name": "Suelo",
+    "tile": 0,
+    "zone": null
+  },
+  "river": {
+    "name": "Río",
+    "tile": 3,
+    "zone": "path"
+  },
+  "build": {
+    "name": "Suelo construible",
+    "tile": 5,
+    "zone": "build"
+  }
+}

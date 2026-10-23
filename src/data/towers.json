@@ -1,0 +1,49 @@
+{
+  "cannon": {
+    "name": "Cañón",
+    "sprite": "cannon",
+    "cost": 50,
+    "placeOn": "build",
+    "weapon": {
+      "range": 70,
+      "fireRate": 1,
+      "targeting": "first",
+      "projectile": {
+        "sprite": "ball",
+        "speed": 160,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 20
+          }
+        ]
+      }
+    }
+  },
+  "hotShot": {
+    "name": "chorro loco",
+    "sprite": "hotshot",
+    "cost": 90,
+    "placeOn": "build",
+    "weapon": {
+      "range": 60,
+      "fireRate": 0.6,
+      "targeting": "strongest",
+      "projectile": {
+        "sprite": "hotball",
+        "speed": 130,
+        "effects": [
+          {
+            "type": "damage",
+            "amount": 10
+          },
+          {
+            "type": "burn",
+            "dps": 12,
+            "duration": 3
+          }
+        ]
+      }
+    }
+  }
+}

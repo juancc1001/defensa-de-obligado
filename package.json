@@ -1,0 +1,22 @@
+{
+  "name": "defensa-de-obligado",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-personal:juancc1001/defensa-de-obligado.git"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "vite": "^6.4.5"
+  }
+}
