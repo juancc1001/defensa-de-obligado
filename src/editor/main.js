@@ -236,7 +236,9 @@ function drawShape(c, shape, color, cx, cy) {
   c.stroke();
 }
 
-// --- Palette and drag & drop ---
+// --- Palette: pick an element, then click the map to place it ---
+
+let selected = null;
 
 function buildPalette() {
   addSection(
@@ -262,8 +264,11 @@ function addSection(title, entries) {
   list.className = 'palette';
   for (const { kind, id, label, paint } of entries) {
     const item = document.createElement('div');
-    item.draggable = true;
-    item.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ kind, id }));
+    item.onclick = () => {
+      document.querySelector('.palette .selected')?.classList.remove('selected');
+      item.classList.add('selected');
+      selected = { kind, id };
+    };
     const preview = document.createElement('canvas');
     preview.width = preview.height = SIZE;
     const c = preview.getContext('2d');
@@ -275,44 +280,17 @@ function addSection(title, entries) {
   $('palette').append(h, list);
 }
 
-// Placed elements can be dragged to another cell: the tower / enemy / ship if there is one, else the ground tile.
-canvas.draggable = true;
-canvas.ondragstart = (e) => {
-  const { tx, ty } = cellAt(e);
-  const obj = entityAt(tx, ty);
-  const drag = obj ? { kind: obj.type, id: obj.name } : { kind: 'tile', id: ground().data[ty * map.width + tx] };
-  e.dataTransfer.setData('text/plain', JSON.stringify({ ...drag, from: { tx, ty } }));
-
-  const c = dragImage.getContext('2d');
-  c.clearRect(0, 0, SIZE, SIZE);
-  c.imageSmoothingEnabled = false;
-  if (obj) drawEntity(c, obj.type, obj.name, SIZE / 2, SIZE / 2);
-  else drawTile(c, drag.id, 0, 0);
-  e.dataTransfer.setDragImage(dragImage, SIZE / 2, SIZE / 2);
-};
-
-// Shown under the cursor instead of the whole map. Kept off-screen in the DOM so Chrome can render it.
-const dragImage = document.createElement('canvas');
-dragImage.width = dragImage.height = SIZE;
-dragImage.style.cssText = 'position: fixed; top: -100px;';
-document.body.append(dragImage);
-
-canvas.ondragover = (e) => e.preventDefault();
-
-canvas.ondrop = (e) => {
-  e.preventDefault();
-  const drag = JSON.parse(e.dataTransfer.getData('text/plain'));
-  const { kind, from } = drag;
-  let id = drag.id;
+canvas.onclick = (e) => {
+  if (!selected) return;
+  const { kind } = selected;
+  let id = selected.id;
   const { tx, ty } = cellAt(e);
   // New entries get the next number; there is only one set of chains.
-  if (kind === 'spawn' && !from) id = String(Math.max(0, ...spawns().map(Number)) + 1);
+  if (kind === 'spawn') id = String(Math.max(0, ...spawns().map(Number)) + 1);
   if (kind === 'objective') entities().objects = entities().objects.filter((o) => o.type !== 'objective');
-  if (from && kind === 'tile') ground().data[from.ty * map.width + from.tx] = gid(terrain.floor);
-  else if (from) removeEntityAt(from.tx, from.ty);
 
   if (kind === 'tile') {
-    // Clear upper layers too, so the dropped tile is the one that counts.
+    // Clear upper layers too, so the placed tile is the one that counts.
     for (const layer of map.layers) {
       if (layer.type === 'tilelayer') layer.data[ty * map.width + tx] = layer.name === 'ground' ? id : 0;
     }
@@ -349,14 +327,6 @@ function spawns() {
   return entities()
     .objects.filter((o) => o.type === 'spawn')
     .map((o) => o.name);
-}
-
-function ground() {
-  return map.layers.find((l) => l.name === 'ground');
-}
-
-function entityAt(tx, ty) {
-  return entities().objects.find((o) => Math.floor(o.x / TILE) === tx && Math.floor(o.y / TILE) === ty);
 }
 
 function removeEntityAt(tx, ty) {

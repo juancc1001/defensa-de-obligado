@@ -13,7 +13,8 @@
       input { width: 50px; }
       #name { width: 150px; }
       .palette { display: flex; flex-wrap: wrap; gap: 4px; }
-      .palette div { width: 76px; text-align: center; font-size: 11px; cursor: grab; }
+      .palette div { width: 76px; text-align: center; font-size: 11px; cursor: pointer; }
+      .palette .selected { outline: 2px solid #ff0; }
       #level-name { width: 200px; }
       .wave { margin: 8px 0; padding: 8px; background: #2c2c2c; }
       .group { margin: 4px 0 4px 16px; }
@@ -37,7 +38,7 @@
         <button id="resize">Redimensionar</button>
         <button id="save">Guardar</button>
       </p>
-      <p>Arrastrá sobre el mapa. Arrastrá lo colocado para moverlo. Clic derecho quita una torre / barco / entrada / cadenas.</p>
+      <p>Elegí un elemento y hacé clic en el mapa para colocarlo. Clic derecho quita una torre / barco / entrada / cadenas.</p>
 
       <div id="palette"></div>
     </aside>

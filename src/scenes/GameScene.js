@@ -44,8 +44,9 @@ export default class GameScene extends Phaser.Scene {
 
     this.ghost = this.add.image(0, 0, '__DEFAULT').setAlpha(0.6).setDepth(10).setVisible(false);
     this.input.mouse.disableContextMenu();
-    this.input.on('pointermove', (p) => this.updateGhost(p));
+    this.input.on('pointermove', (p) => this.onPointerMove(p));
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
+    this.input.on('pointerup', (p) => this.onPointerUp(p));
     this.input.on('wheel', (p, objects, dx, dy) => this.zoom(p, dy));
     this.input.keyboard.on('keydown-ESC', () => this.registry.set('building', null));
 
@@ -80,6 +81,16 @@ export default class GameScene extends Phaser.Scene {
     this.updateGhost(pointer);
   }
 
+  // Dragging with the button down moves the map.
+  onPointerMove(pointer) {
+    if (pointer.isDown) {
+      const cam = this.cameras.main;
+      cam.scrollX -= (pointer.x - pointer.prevPosition.x) / cam.zoom;
+      cam.scrollY -= (pointer.y - pointer.prevPosition.y) / cam.zoom;
+    }
+    this.updateGhost(pointer);
+  }
+
   // --- Building towers and items ---
 
   updateGhost(pointer) {
@@ -97,13 +108,16 @@ export default class GameScene extends Phaser.Scene {
   }
 
   onPointerDown(pointer) {
-    const building = this.registry.get('building');
     if (pointer.rightButtonDown()) {
       this.registry.set('building', null);
       this.ghost.setVisible(false);
-      return;
     }
-    if (!building) return;
+  }
+
+  // Builds on release, unless the pointer was dragging the map.
+  onPointerUp(pointer) {
+    const building = this.registry.get('building');
+    if (!building || pointer.button !== 0 || pointer.getDistance() > 4) return;
 
     const { tx, ty } = this.tileAt(pointer);
     if (!this.canPlace(building, tx, ty)) return;
