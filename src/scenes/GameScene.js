@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE } from '../config.js';
+import { TILE, MAX_VIEW_TILES, MAX_ZOOM } from '../config.js';
 import { maps } from '../data/maps.js';
 import Level from '../systems/Level.js';
 import WaveManager from '../systems/WaveManager.js';
@@ -18,9 +18,10 @@ export default class GameScene extends Phaser.Scene {
     const def = maps[mapId].level;
     this.mapId = mapId;
     this.level = new Level(this, mapId);
-    // Zoom so the whole map fits the window, whatever its size.
+    // Starts as zoomed out as allowed.
     const { widthInPixels: w, heightInPixels: h } = this.level.map;
-    this.cameras.main.setZoom(Math.min(this.scale.width / w, this.scale.height / h)).centerOn(w / 2, h / 2);
+    this.minZoom = Math.max(this.scale.width / (MAX_VIEW_TILES * TILE), Math.min(this.scale.width / w, this.scale.height / h));
+    this.cameras.main.setBounds(0, 0, w, h).setZoom(this.minZoom).centerOn(w / 2, h / 2);
     this.objective = new Objective(this, this.level.objectiveRect, def.objective);
     this.enemies = this.add.group();
     this.occupied = new Map();
@@ -45,6 +46,7 @@ export default class GameScene extends Phaser.Scene {
     this.input.mouse.disableContextMenu();
     this.input.on('pointermove', (p) => this.updateGhost(p));
     this.input.on('pointerdown', (p) => this.onPointerDown(p));
+    this.input.on('wheel', (p, objects, dx, dy) => this.zoom(p, dy));
     this.input.keyboard.on('keydown-ESC', () => this.registry.set('building', null));
 
     this.scene.launch('UI');
@@ -64,6 +66,18 @@ export default class GameScene extends Phaser.Scene {
 
   onEnemyKilled(enemy) {
     this.registry.inc('gold', enemy.def.reward);
+  }
+
+  // Keeps the point under the cursor in place.
+  zoom(pointer, dy) {
+    const cam = this.cameras.main;
+    const before = cam.getWorldPoint(pointer.x, pointer.y);
+    cam.setZoom(Phaser.Math.Clamp(cam.zoom * (dy > 0 ? 0.9 : 1.1), this.minZoom, MAX_ZOOM));
+    cam.preRender();
+    const after = cam.getWorldPoint(pointer.x, pointer.y);
+    cam.scrollX += before.x - after.x;
+    cam.scrollY += before.y - after.y;
+    this.updateGhost(pointer);
   }
 
   // --- Building towers and items ---
