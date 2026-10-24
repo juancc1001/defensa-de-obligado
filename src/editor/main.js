@@ -177,6 +177,8 @@ function draw() {
 function drawTile(c, gid, x, y) {
   if (!gid) return;
   const id = gid - tileset.firstgid;
+  const img = spriteImages[Object.values(terrain).find((t) => t.tile === id)?.sprite];
+  if (img?.naturalWidth) return c.drawImage(img, x, y, SIZE, SIZE);
   c.drawImage(tilesImage, (id % tileset.columns) * TILE, Math.floor(id / tileset.columns) * TILE, TILE, TILE, x, y, SIZE, SIZE);
 }
 

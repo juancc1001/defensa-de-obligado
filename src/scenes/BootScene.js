@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { maps } from '../data/maps.js';
+import { TILE } from '../config.js';
 import { sprites } from '../data/sprites.js';
+import { terrain } from '../data/terrain.js';
 import { makePlaceholders } from '../assets/placeholders.js';
 
 export default class BootScene extends Phaser.Scene {
@@ -22,7 +24,29 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create() {
+    this.paintTerrainSprites();
     makePlaceholders(this);
     this.scene.start('Menu');
+  }
+
+  // Terrain with an uploaded PNG: it replaces its tile in terrain.png.
+  paintTerrainSprites() {
+    const painted = Object.values(terrain).filter((t) => this.textures.exists(t.sprite));
+    if (!painted.length || !this.textures.exists('terrain')) return;
+    const source = this.textures.get('terrain').getSourceImage();
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const c = canvas.getContext('2d');
+    c.drawImage(source, 0, 0);
+    const columns = source.width / TILE;
+    for (const t of painted) {
+      const x = (t.tile % columns) * TILE;
+      const y = Math.floor(t.tile / columns) * TILE;
+      c.clearRect(x, y, TILE, TILE);
+      c.drawImage(this.textures.get(t.sprite).getSourceImage(), x, y, TILE, TILE);
+    }
+    this.textures.remove('terrain');
+    this.textures.addCanvas('terrain', canvas);
   }
 }

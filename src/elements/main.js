@@ -73,6 +73,7 @@ const categories = {
     fields: [
       ['name', 'Nombre', 'text'],
       ['tile', 'Tile', 'tile'],
+      ['sprite', 'PNG (reemplaza el tile)', 'sprite'],
       ['zone', 'Zona', ['', ...zones]],
     ],
     template: (id) => ({ name: id, tile: 0, zone: null }),
@@ -229,7 +230,7 @@ function effectsEditor(list) {
 function spriteEditor(def, path) {
   const box = document.createElement('span');
   const key = document.createElement('input');
-  key.value = get(def, path);
+  key.value = get(def, path) ?? '';
   key.onchange = () => {
     set(def, path, key.value);
     render();
