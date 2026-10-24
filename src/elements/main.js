@@ -235,7 +235,7 @@ function effectsEditor(list) {
 function spriteEditor(def, path) {
   const box = document.createElement('span');
   const key = document.createElement('input');
-  key.value = get(def, path) ?? '';
+  key.value = get(def, path) ?? current.id;
   key.onchange = () => {
     set(def, path, key.value);
     render();
@@ -247,6 +247,7 @@ function spriteEditor(def, path) {
   file.onchange = async () => {
     try {
       sprites[key.value] = await api.uploadSprite(key.value, file.files[0]);
+      set(def, path, key.value);
     } catch (e) {
       return alert(e.message);
     }
