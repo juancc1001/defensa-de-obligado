@@ -76,7 +76,12 @@ const categories = {
       ['sprite', 'PNG (reemplaza el tile)', 'sprite'],
       ['zone', 'Zona', ['', ...zones]],
     ],
-    template: (id) => ({ name: id, tile: 0, zone: null }),
+    // First tile no other terrain uses, so a PNG for it doesn't replace another terrain's.
+    template: (id) => {
+      let tile = 0;
+      while (Object.values(terrain).some((t) => t.tile === tile)) tile++;
+      return { name: id, tile, zone: null };
+    },
   },
 };
 
