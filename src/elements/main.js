@@ -235,7 +235,9 @@ function effectsEditor(list) {
 function spriteEditor(def, path) {
   const box = document.createElement('span');
   const key = document.createElement('input');
-  key.value = get(def, path) ?? current.id;
+  // Default key goes into the data too, otherwise it's shown but never saved.
+  if (!get(def, path)) set(def, path, current.id);
+  key.value = get(def, path);
   key.onchange = () => {
     set(def, path, key.value);
     render();
