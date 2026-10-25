@@ -282,44 +282,63 @@ function addSection(title, entries) {
   $('palette').append(h, list);
 }
 
-canvas.onclick = (e) => {
-  if (!selected) return;
+// Hold and drag to paint terrain or erase. Right button erases: entities if the first cell has one, else terrain.
+let painting = null;
+
+canvas.onmousedown = (e) => {
+  const { tx, ty } = cellAt(e);
+  if (e.button === 2) painting = entityAt(tx, ty) ? 'entities' : 'terrain';
+  else if (e.button === 0 && selected) painting = 'place';
+  else return;
+  paint(tx, ty);
+};
+
+canvas.onmousemove = (e) => {
+  // Dragging only repeats tiles; entities are placed one per click.
+  if (!painting || (painting === 'place' && selected.kind !== 'tile')) return;
+  const { tx, ty } = cellAt(e);
+  paint(tx, ty);
+};
+
+window.onmouseup = () => (painting = null);
+canvas.oncontextmenu = (e) => e.preventDefault();
+
+function paint(tx, ty) {
+  if (painting === 'place') place(tx, ty);
+  else if (painting === 'entities') removeEntityAt(tx, ty);
+  else setTile(tx, ty, gid(terrain.floor));
+  draw();
+}
+
+function place(tx, ty) {
   const { kind } = selected;
   let id = selected.id;
-  const { tx, ty } = cellAt(e);
   // New entries get the next number; there is only one set of chains.
   if (kind === 'spawn') id = String(Math.max(0, ...spawns().map(Number)) + 1);
   if (kind === 'objective') entities().objects = entities().objects.filter((o) => o.type !== 'objective');
 
-  if (kind === 'tile') {
-    // Clear upper layers too, so the placed tile is the one that counts.
-    for (const layer of map.layers) {
-      if (layer.type === 'tilelayer') layer.data[ty * map.width + tx] = layer.name === 'ground' ? id : 0;
-    }
-  } else {
-    removeEntityAt(tx, ty);
-    entities().objects.push({
-      id: map.nextobjectid++,
-      name: id,
-      type: kind,
-      x: tx * TILE + TILE / 2,
-      y: ty * TILE + TILE / 2,
-      width: 0,
-      height: 0,
-      rotation: 0,
-      visible: true,
-      point: true,
-    });
-  }
-  draw();
-};
-
-canvas.oncontextmenu = (e) => {
-  e.preventDefault();
-  const { tx, ty } = cellAt(e);
+  if (kind === 'tile') return setTile(tx, ty, id);
   removeEntityAt(tx, ty);
-  draw();
-};
+  entities().objects.push({
+    id: map.nextobjectid++,
+    name: id,
+    type: kind,
+    x: tx * TILE + TILE / 2,
+    y: ty * TILE + TILE / 2,
+    width: 0,
+    height: 0,
+    rotation: 0,
+    visible: true,
+    point: true,
+  });
+}
+
+// Clear upper layers too, so the placed tile is the one that counts.
+function setTile(tx, ty, id) {
+  for (const layer of map.layers) {
+    if (layer.type === 'tilelayer') layer.data[ty * map.width + tx] = layer.name === 'ground' ? id : 0;
+  }
+}
 
 function cellAt(e) {
   return { tx: Math.floor(e.offsetX / SIZE), ty: Math.floor(e.offsetY / SIZE) };
@@ -331,9 +350,15 @@ function spawns() {
     .map((o) => o.name);
 }
 
+const inCell = (o, tx, ty) => Math.floor(o.x / TILE) === tx && Math.floor(o.y / TILE) === ty;
+
+function entityAt(tx, ty) {
+  return entities().objects.some((o) => inCell(o, tx, ty));
+}
+
 function removeEntityAt(tx, ty) {
   const layer = entities();
-  layer.objects = layer.objects.filter((o) => Math.floor(o.x / TILE) !== tx || Math.floor(o.y / TILE) !== ty);
+  layer.objects = layer.objects.filter((o) => !inCell(o, tx, ty));
 }
 
 // --- Level settings and waves ---

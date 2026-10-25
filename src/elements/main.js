@@ -76,12 +76,7 @@ const categories = {
       ['sprite', 'PNG (reemplaza el tile)', 'sprite'],
       ['zone', 'Zona', ['', ...zones]],
     ],
-    // First tile no other terrain uses, so a PNG for it doesn't replace another terrain's.
-    template: (id) => {
-      let tile = 0;
-      while (Object.values(terrain).some((t) => t.tile === tile)) tile++;
-      return { name: id, tile, zone: null };
-    },
+    template: (id) => ({ name: id, tile: freeTile(), zone: null }),
   },
 };
 
@@ -89,6 +84,22 @@ const paramLabels = { amount: 'cantidad', dps: 'daño/s', duration: 'duración (
 
 const $ = (id) => document.getElementById(id);
 let current = null;
+
+// Maps store terrain by tile number, so each terrain needs its own (a PNG then draws over that tile).
+const tileUsed = (tile, def) => Object.values(terrain).some((t) => t !== def && t.tile === tile);
+
+function freeTile(def) {
+  let tile = 0;
+  while (tileUsed(tile, def)) tile++;
+  return tile;
+}
+
+// Terrains made before tiles were auto-assigned can share one; move them to a free tile.
+const seen = new Set();
+for (const t of Object.values(terrain)) {
+  if (seen.has(t.tile)) t.tile = freeTile(t);
+  seen.add(t.tile);
+}
 
 const tilesImage = new Image();
 tilesImage.src = 'assets/tiles/terrain.png';
@@ -148,7 +159,11 @@ function render() {
   const title = document.createElement('h2');
   title.textContent = `${c.label}: ${def.name} (${current.id})`;
   $('form').append(title);
-  for (const [path, label, type] of c.fields) $('form').append(field(def, path, label, type));
+  for (const [path, label, type] of c.fields) {
+    // With a PNG the tile number is just an id, already picked automatically.
+    if (type === 'tile' && sprites[def.sprite]) continue;
+    $('form').append(field(def, path, label, type));
+  }
 }
 
 function field(def, path, label, type) {
@@ -163,7 +178,8 @@ function field(def, path, label, type) {
     row.append(spriteEditor(def, path));
   } else if (type === 'tile') {
     const count = (tilesImage.width / TILE) * (tilesImage.height / TILE);
-    row.append(selector([...Array(count).keys()], get(def, path), (v) => set(def, path, Number(v))));
+    const free = [...Array(count).keys()].filter((tile) => !tileUsed(tile, def));
+    row.append(selector(free, get(def, path), (v) => set(def, path, Number(v))));
     row.append(tilePreview(get(def, path)));
   } else if (Array.isArray(type)) {
     row.append(selector(type, get(def, path), (v) => set(def, path, v || null)));
