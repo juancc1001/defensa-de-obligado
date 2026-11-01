@@ -2,8 +2,13 @@ export const TILE = 16;
 // The world is drawn at ZOOM; the HUD (UIScene) is not.
 export const ZOOM = 2;
 // Starting screen resolution, chosen in the Opciones menu. Scenes read the current one from this.scale.
+// Until one is chosen, the largest that fits in the window.
 export const RESOLUTIONS = ['960x544', '1280x720', '1600x900', '1920x1080'];
-const [width, height] = (localStorage.getItem('resolution') || RESOLUTIONS[0]).split('x').map(Number);
+const fitting = RESOLUTIONS.filter((r) => {
+  const [w, h] = r.split('x').map(Number);
+  return w <= window.innerWidth && h <= window.innerHeight;
+});
+const [width, height] = (localStorage.getItem('resolution') || fitting.pop() || RESOLUTIONS[0]).split('x').map(Number);
 export const WIDTH = width;
 export const HEIGHT = height;
 // Mouse wheel zoom in levels, towards the cursor. Dragging moves around the map.
