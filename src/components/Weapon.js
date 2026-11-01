@@ -16,7 +16,7 @@ export default class Weapon {
     if (this.cooldown > 0) return;
 
     const { range, targeting, projectile, fireRate } = this.def;
-    const target = findTarget(this.scene.enemies.getChildren(), this.owner, range, targeting);
+    const target = findTarget(this.scene.enemies.getChildren().filter((e) => !e.hidden), this.owner, range, targeting);
     if (!target) return;
 
     new Projectile(this.scene, this.owner.x, this.owner.y, target, projectile);

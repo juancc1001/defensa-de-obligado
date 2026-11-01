@@ -5,6 +5,8 @@ import GameScene from './scenes/GameScene.js';
 import UIScene from './scenes/UIScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import LevelSelectScene from './scenes/LevelSelectScene.js';
+import OptionsScene from './scenes/OptionsScene.js';
+import CutsceneScene from './scenes/CutsceneScene.js';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -14,5 +16,5 @@ new Phaser.Game({
   pixelArt: true,
   backgroundColor: '#000000',
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [BootScene, MenuScene, LevelSelectScene, GameScene, UIScene],
+  scene: [BootScene, MenuScene, LevelSelectScene, OptionsScene, CutsceneScene, GameScene, UIScene],
 });

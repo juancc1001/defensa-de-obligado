@@ -4,6 +4,7 @@
     "sprite": "cannon",
     "cost": 50,
     "placeOn": "build",
+    "size": 1,
     "weapon": {
       "range": 70,
       "fireRate": 1,
@@ -25,6 +26,7 @@
     "sprite": "hotshot",
     "cost": 90,
     "placeOn": "build",
+    "size": 1,
     "weapon": {
       "range": 60,
       "fireRate": 0.6,

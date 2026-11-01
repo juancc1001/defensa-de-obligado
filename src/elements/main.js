@@ -12,7 +12,7 @@ import * as api from '../services/api.js';
 
 await requireLogin();
 
-// Field: [path in the data, label, type]. type is 'text', 'number', 'sprite', 'effects', 'tile'
+// Field: [path in the data, label, type]. type is 'text', 'number', 'checkbox', 'sprite', 'effects', 'tile'
 // or an array of options (shown as a selector).
 const categories = {
   towers: {
@@ -23,6 +23,7 @@ const categories = {
       ['sprite', 'Sprite', 'sprite'],
       ['cost', 'Costo', 'number'],
       ['placeOn', 'Se coloca en', zones],
+      ['size', 'Tamaño (tiles por lado)', 'number'],
       ['weapon.range', 'Alcance (px)', 'number'],
       ['weapon.fireRate', 'Disparos por segundo', 'number'],
       ['weapon.targeting', 'Apunta a', Object.keys(rules)],
@@ -35,6 +36,7 @@ const categories = {
       sprite: id,
       cost: 50,
       placeOn: 'build',
+      size: 1,
       weapon: { range: 70, fireRate: 1, targeting: 'first', projectile: { sprite: 'ball', speed: 160, effects: [{ type: 'damage', amount: 10 }] } },
     }),
   },
@@ -61,11 +63,12 @@ const categories = {
       ['sprite', 'Sprite', 'sprite'],
       ['cost', 'Costo', 'number'],
       ['placeOn', 'Se coloca en', zones],
+      ['size', 'Tamaño (tiles por lado)', 'number'],
       ['radius', 'Radio de activación (px)', 'number'],
       ['uses', 'Usos', 'number'],
       ['effects', 'Efectos', 'effects'],
     ],
-    template: (id) => ({ name: id, sprite: id, cost: 30, placeOn: 'path', radius: 10, uses: 1, effects: [{ type: 'damage', amount: 10 }] }),
+    template: (id) => ({ name: id, sprite: id, cost: 30, placeOn: 'path', size: 1, radius: 10, uses: 1, effects: [{ type: 'damage', amount: 10 }] }),
   },
   terrain: {
     label: 'Terreno',
@@ -75,6 +78,7 @@ const categories = {
       ['tile', 'Tile', 'tile'],
       ['sprite', 'PNG (reemplaza el tile)', 'sprite'],
       ['zone', 'Zona', ['', ...zones]],
+      ['cover', 'Esconde a los enemigos (no reciben daño)', 'checkbox'],
     ],
     template: (id) => ({ name: id, tile: freeTile(), zone: null }),
   },
@@ -181,6 +185,12 @@ function field(def, path, label, type) {
     const free = [...Array(count).keys()].filter((tile) => !tileUsed(tile, def));
     row.append(selector(free, get(def, path), (v) => set(def, path, Number(v))));
     row.append(tilePreview(get(def, path)));
+  } else if (type === 'checkbox') {
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = !!get(def, path);
+    input.onchange = () => set(def, path, input.checked);
+    row.append(input);
   } else if (Array.isArray(type)) {
     row.append(selector(type, get(def, path), (v) => set(def, path, v || null)));
   } else {

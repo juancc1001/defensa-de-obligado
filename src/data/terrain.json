@@ -13,5 +13,11 @@
     "name": "Suelo construible",
     "tile": 5,
     "zone": "build"
+  },
+  "shield": {
+    "name": "Escudo",
+    "tile": 7,
+    "zone": "path",
+    "cover": true
   }
 }

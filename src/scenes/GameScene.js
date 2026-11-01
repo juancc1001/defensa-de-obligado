@@ -1,11 +1,13 @@
 import Phaser from 'phaser';
-import { TILE, MAX_VIEW_TILES, MAX_ZOOM } from '../config.js';
+import { TILE, START_VIEW_TILES, MAX_ZOOM } from '../config.js';
 import { maps } from '../data/maps.js';
 import Level from '../systems/Level.js';
 import WaveManager from '../systems/WaveManager.js';
 import Tower from '../entities/Tower.js';
 import Item from '../entities/Item.js';
 import Objective from '../entities/Objective.js';
+import { towers } from '../data/towers.js';
+import { items } from '../data/items.js';
 
 // Shared state lives in this.registry so UIScene can read it:
 // gold, objectiveHp, wave, waves, building ({ kind, id, def } or null), result ('win' | 'lose' | null).
@@ -18,11 +20,15 @@ export default class GameScene extends Phaser.Scene {
     const def = maps[mapId].level;
     this.mapId = mapId;
     this.level = new Level(this, mapId);
-    // Starts as zoomed out as allowed.
     const { widthInPixels: w, heightInPixels: h } = this.level.map;
-    this.minZoom = Math.max(this.scale.width / (MAX_VIEW_TILES * TILE), Math.min(this.scale.width / w, this.scale.height / h));
-    this.cameras.main.setBounds(0, 0, w, h).setZoom(this.minZoom).centerOn(w / 2, h / 2);
-    this.objective = new Objective(this, this.level.objectiveRect, def.objective);
+    this.minZoom = Math.max(this.scale.width / w, this.scale.height / h);
+    const start = this.level.entities.find((o) => o.type === 'camera') ?? Object.values(this.level.paths)[0].getStartPoint();
+    this.cameras.main
+      .setBounds(0, 0, w, h)
+      .setZoom(Math.max(this.minZoom, this.scale.width / (START_VIEW_TILES * TILE)))
+      .centerOn(start.x, start.y);
+    for (const rect of this.level.objectiveRects) new Objective(this, rect, def.objective);
+    this.objectiveHp = def.objective.hp;
     this.enemies = this.add.group();
     this.occupied = new Map();
     for (const obj of this.level.entities) {
@@ -56,13 +62,18 @@ export default class GameScene extends Phaser.Scene {
   update(time, delta) {
     this.waves.update(delta / 1000);
 
-    if (this.objective.hp <= 0) this.finish('lose');
+    if (this.objectiveHp <= 0) this.finish('lose');
     else if (this.waves.done && this.enemies.countActive() === 0) this.finish('win');
   }
 
   finish(result) {
     this.registry.set('result', result);
     this.scene.pause();
+  }
+
+  damageObjective(amount) {
+    this.objectiveHp = Math.max(0, this.objectiveHp - amount);
+    this.registry.set('objectiveHp', Math.ceil(this.objectiveHp));
   }
 
   onEnemyKilled(enemy) {
@@ -99,7 +110,8 @@ export default class GameScene extends Phaser.Scene {
       this.ghost.setVisible(false);
       return;
     }
-    const { tx, ty, x, y } = this.tileAt(pointer);
+    const { tx, ty } = this.tileAt(pointer);
+    const { x, y } = this.footprint(building.def, tx, ty);
     this.ghost
       .setTexture(building.def.sprite)
       .setPosition(x, y)
@@ -128,23 +140,36 @@ export default class GameScene extends Phaser.Scene {
   }
 
   place(Cls, id, tx, ty) {
-    const obj = new Cls(this, tx * TILE + TILE / 2, ty * TILE + TILE / 2, id);
-    const key = `${tx},${ty}`;
-    this.occupied.set(key, obj);
-    obj.once('destroy', () => this.occupied.delete(key));
+    const def = (Cls === Tower ? towers : items)[id];
+    const { x, y, cells } = this.footprint(def, tx, ty);
+    const obj = new Cls(this, x, y, id);
+    const keys = cells.map(([cx, cy]) => `${cx},${cy}`);
+    for (const key of keys) this.occupied.set(key, obj);
+    obj.once('destroy', () => keys.forEach((key) => this.occupied.delete(key)));
   }
 
   canPlace(building, tx, ty) {
+    const { cells } = this.footprint(building.def, tx, ty);
     return (
-      this.level.zoneAt(tx, ty) === building.def.placeOn &&
-      !this.occupied.has(`${tx},${ty}`) &&
+      cells.every(([cx, cy]) => this.level.zoneAt(cx, cy) === building.def.placeOn && !this.occupied.has(`${cx},${cy}`)) &&
       this.registry.get('gold') >= building.def.cost
     );
   }
 
+  // A tower or item of `size` covers size x size cells around the one clicked
+  // (odd sizes centered on it, even sizes with it as the top-left of the middle).
+  footprint(def, tx, ty) {
+    const size = def.size ?? 1;
+    const ox = tx - Math.floor((size - 1) / 2);
+    const oy = ty - Math.floor((size - 1) / 2);
+    const cells = [];
+    for (let y = oy; y < oy + size; y++) {
+      for (let x = ox; x < ox + size; x++) cells.push([x, y]);
+    }
+    return { x: (ox + size / 2) * TILE, y: (oy + size / 2) * TILE, cells };
+  }
+
   tileAt(pointer) {
-    const tx = Math.floor(pointer.worldX / TILE);
-    const ty = Math.floor(pointer.worldY / TILE);
-    return { tx, ty, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+    return { tx: Math.floor(pointer.worldX / TILE), ty: Math.floor(pointer.worldY / TILE) };
   }
 }

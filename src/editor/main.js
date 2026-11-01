@@ -13,7 +13,7 @@ await requireLogin();
 const SIZE = TILE * ZOOM;
 
 // Saved as point objects in the `entities` layer: name = data id, type = kind.
-// Besides these, `spawn` points (name = entry number) and one `objective` point (the chains).
+// Besides these, `spawn` points (name = entry number), `objective` points (the chains, sharing one HP) and one `camera` point (where the level starts).
 const kinds = {
   tower: { label: 'Torres', defs: towers, shape: 'square' },
   ship: { label: 'Barcos propios', defs: items, shape: 'diamond' },
@@ -157,6 +157,7 @@ function entities() {
 
 $('new').onclick = newMap;
 $('resize').onclick = resize;
+$('ratio').onclick = () => ($('height').value = Math.round((Number($('width').value) * 9) / 16));
 $('save').onclick = save;
 
 // --- Drawing ---
@@ -165,11 +166,17 @@ function draw() {
   canvas.width = map.width * SIZE;
   canvas.height = map.height * SIZE;
   ctx.imageSmoothingEnabled = false;
-  for (const layer of map.layers) {
-    if (layer.type !== 'tilelayer') continue;
-    layer.data.forEach((gid, i) => drawTile(ctx, gid, (i % map.width) * SIZE, Math.floor(i / map.width) * SIZE));
+  const drawLayer = (layer) => layer.data.forEach((gid, i) => drawTile(ctx, gid, (i % map.width) * SIZE, Math.floor(i / map.width) * SIZE));
+  const tileLayers = map.layers.filter((l) => l.type === 'tilelayer');
+  tileLayers.filter((l) => l.name !== 'overlay').forEach(drawLayer);
+  for (const obj of entities().objects) {
+    // Even sizes sit half a tile right and down of the clicked cell, like in the game (GameScene.footprint).
+    const size = kinds[obj.type]?.defs[obj.name].size ?? 1;
+    const shift = size % 2 ? 0 : TILE / 2;
+    drawEntity(ctx, obj.type, obj.name, (obj.x + shift) * ZOOM, (obj.y + shift) * ZOOM);
   }
-  for (const obj of entities().objects) drawEntity(ctx, obj.type, obj.name, obj.x * ZOOM, obj.y * ZOOM);
+  // Like in the game, the overlay goes on top of everything.
+  tileLayers.filter((l) => l.name === 'overlay').forEach(drawLayer);
   // Entries may have changed, and the wave groups pick from them.
   renderLevel();
 }
@@ -191,6 +198,12 @@ function drawEntity(c, kind, id, cx, cy) {
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillText(id, cx - 4, cy);
+    return;
+  }
+  if (kind === 'camera') {
+    c.strokeStyle = '#fff';
+    c.lineWidth = 2;
+    c.strokeRect(cx - 6 * ZOOM, cy - 4 * ZOOM, 12 * ZOOM, 8 * ZOOM);
     return;
   }
   const sprite = kind === 'objective' ? map?.level.objective.sprite ?? 'chains' : kinds[kind].defs[id].sprite;
@@ -256,6 +269,7 @@ function buildPalette() {
   addSection('Nivel', [
     { kind: 'spawn', id: '', label: 'Entrada de enemigos', paint: (c) => drawEntity(c, 'spawn', '', SIZE / 2, SIZE / 2) },
     { kind: 'objective', id: 'chains', label: 'Cadenas', paint: (c) => drawEntity(c, 'objective', 'chains', SIZE / 2, SIZE / 2) },
+    { kind: 'camera', id: '', label: 'Inicio de cámara', paint: (c) => drawEntity(c, 'camera', '', SIZE / 2, SIZE / 2) },
   ]);
 }
 
@@ -306,6 +320,7 @@ canvas.oncontextmenu = (e) => e.preventDefault();
 function paint(tx, ty) {
   if (painting === 'place') place(tx, ty);
   else if (painting === 'entities') removeEntityAt(tx, ty);
+  else if ($('overlay').checked) overlay().data[ty * map.width + tx] = 0;
   else setTile(tx, ty, gid(terrain.floor));
   draw();
 }
@@ -313,11 +328,15 @@ function paint(tx, ty) {
 function place(tx, ty) {
   const { kind } = selected;
   let id = selected.id;
-  // New entries get the next number; there is only one set of chains.
+  // New entries get the next number; there is only one camera start.
   if (kind === 'spawn') id = String(Math.max(0, ...spawns().map(Number)) + 1);
-  if (kind === 'objective') entities().objects = entities().objects.filter((o) => o.type !== 'objective');
+  if (kind === 'camera') entities().objects = entities().objects.filter((o) => o.type !== 'camera');
 
-  if (kind === 'tile') return setTile(tx, ty, id);
+  if (kind === 'tile') {
+    if ($('overlay').checked) overlay().data[ty * map.width + tx] = id;
+    else setTile(tx, ty, id);
+    return;
+  }
   removeEntityAt(tx, ty);
   entities().objects.push({
     id: map.nextobjectid++,
@@ -333,11 +352,22 @@ function place(tx, ty) {
   });
 }
 
-// Clear upper layers too, so the placed tile is the one that counts.
+// Clear upper layers too, so the placed tile is the one that counts. The overlay stays.
 function setTile(tx, ty, id) {
   for (const layer of map.layers) {
-    if (layer.type === 'tilelayer') layer.data[ty * map.width + tx] = layer.name === 'ground' ? id : 0;
+    if (layer.type === 'tilelayer' && layer.name !== 'overlay') layer.data[ty * map.width + tx] = layer.name === 'ground' ? id : 0;
   }
+}
+
+// Tile layer drawn above ships and towers (e.g. Escudo over the river).
+function overlay() {
+  let layer = map.layers.find((l) => l.name === 'overlay');
+  if (!layer) {
+    const data = Array(map.width * map.height).fill(0);
+    layer = { id: map.nextlayerid++, name: 'overlay', type: 'tilelayer', width: map.width, height: map.height, x: 0, y: 0, opacity: 1, visible: true, data };
+    map.layers.push(layer);
+  }
+  return layer;
 }
 
 function cellAt(e) {

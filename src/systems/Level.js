@@ -5,14 +5,16 @@ import { terrain } from '../data/terrain.js';
 // Builds a map: draws every tile layer and works out the enemy routes and the objective.
 // Two styles are supported:
 // - Hand-drawn (Tiled): `paths` object layer with polylines, `objective` object layer with a rectangle.
-// - Map editor: `entities` object layer with `spawn` points and one `objective` point (the chains).
-//   Each spawn becomes a route along the river from just outside the map to the chains.
+// - Map editor: `entities` object layer with `spawn` points and `objective` points (the chains).
+//   Each spawn becomes a route along the river from just outside the map to the nearest chains.
 export default class Level {
   constructor(scene, mapId) {
     this.map = scene.make.tilemap({ key: mapId });
     const tilesets = this.map.tilesets.map((ts) => this.map.addTilesetImage(ts.name, ts.name));
+    // The `overlay` layer (map editor's "Superponer") is drawn above ships and towers.
     for (const layer of this.map.layers) {
-      this.map.createLayer(layer.name, tilesets);
+      const created = this.map.createLayer(layer.name, tilesets);
+      if (layer.name === 'overlay') created.setDepth(5);
     }
 
     this.paths = {};
@@ -25,35 +27,40 @@ export default class Level {
 
     // Pre-placed towers and ships are read by GameScene.
     this.entities = this.map.getObjectLayer('entities')?.objects ?? [];
-    const chains = this.entities.find((o) => o.type === 'objective');
-    if (chains) {
-      this.objectiveRect = { x: chains.x - TILE / 2, y: chains.y - TILE / 2, width: TILE, height: TILE };
+    const chains = this.entities.filter((o) => o.type === 'objective');
+    if (chains.length) {
+      this.objectiveRects = chains.map((c) => ({ x: c.x - TILE / 2, y: c.y - TILE / 2, width: TILE, height: TILE }));
       for (const spawn of this.entities.filter((o) => o.type === 'spawn')) {
-        this.paths[spawn.name] = this.riverRoute(cellOf(spawn), cellOf(chains));
+        this.paths[spawn.name] = this.riverRoute(cellOf(spawn), chains.map(cellOf));
       }
     } else {
-      this.objectiveRect = this.map.getObjectLayer('objective').objects[0];
+      this.objectiveRects = this.map.getObjectLayer('objective').objects;
     }
   }
 
-  // Shortest route over river tiles (zone 'path'), ending on the tile before the chains.
+  // Shortest route over river tiles (zone 'path') to the nearest chains, ending on the tile before them.
   // A spawn on the map edge starts one tile outside, so enemies sail in.
-  riverRoute(start, goal) {
+  riverRoute(start, goals) {
     const key = (c) => `${c.x},${c.y}`;
+    const isGoal = (c) => goals.some((g) => key(g) === key(c));
     const prev = new Map([[key(start), null]]);
     const queue = [start];
+    let goal = null;
     while (queue.length) {
       const c = queue.shift();
-      if (key(c) === key(goal)) break;
+      if (isGoal(c)) {
+        goal = c;
+        break;
+      }
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const n = { x: c.x + dx, y: c.y + dy };
         if (prev.has(key(n))) continue;
-        if (key(n) !== key(goal) && this.zoneAt(n.x, n.y) !== 'path') continue;
+        if (!isGoal(n) && this.zoneAt(n.x, n.y) !== 'path') continue;
         prev.set(key(n), c);
         queue.push(n);
       }
     }
-    if (!prev.has(key(goal))) throw new Error(`No river route from spawn at ${key(start)} to the chains`);
+    if (!goal) throw new Error(`No river route from spawn at ${key(start)} to the chains`);
 
     const cells = [];
     for (let c = prev.get(key(goal)); c; c = prev.get(key(c))) cells.unshift(c);
@@ -69,12 +76,21 @@ export default class Level {
   }
 
   // Zone of the topmost tile at that cell ('build', 'path' or null), from src/data/terrain.json.
+  // The overlay doesn't change zones: an Escudo over the river is still river.
   zoneAt(tx, ty) {
-    for (const layer of [...this.map.layers].reverse()) {
+    return this.terrainAt(tx, ty, this.map.layers.filter((l) => l.name !== 'overlay'))?.zone ?? null;
+  }
+
+  coverAt(tx, ty) {
+    return this.map.layers.some((l) => this.terrainAt(tx, ty, [l])?.cover);
+  }
+
+  terrainAt(tx, ty, layers) {
+    for (const layer of [...layers].reverse()) {
       const tile = this.map.getTileAt(tx, ty, false, layer.name);
       if (tile) {
         const id = tile.index - tile.tileset.firstgid;
-        return Object.values(terrain).find((t) => t.tile === id)?.zone ?? null;
+        return Object.values(terrain).find((t) => t.tile === id);
       }
     }
     return null;

@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 const MAPS_DIR = path.resolve('src/maps');
 const DATA_DIR = path.resolve('src/data');
-const DATA_FILES = ['towers', 'enemies', 'items', 'terrain', 'sprites'];
+const DATA_FILES = ['towers', 'enemies', 'items', 'terrain', 'sprites', 'levels'];
 const SPRITES_DIR = path.resolve('public/assets/sprites');
 
 // Dev-only API the editors use to list and save maps and game data.
@@ -56,13 +56,13 @@ function mapsApi() {
         });
       });
 
-      // The elements page posts { towers, enemies, items, terrain, sprites } and each one is written to src/data/<name>.json.
+      // The elements page posts { towers, enemies, items, terrain, sprites } and the story page { levels }; each one is written to src/data/<name>.json.
       server.middlewares.use('/api/data', (req, res) => {
         let body = '';
         req.on('data', (chunk) => (body += chunk));
         req.on('end', () => {
           const data = JSON.parse(body);
-          for (const name of DATA_FILES) {
+          for (const name of DATA_FILES.filter((n) => n in data)) {
             fs.writeFileSync(path.join(DATA_DIR, `${name}.json`), JSON.stringify(data[name], null, 2) + '\n');
           }
           res.end('ok');
@@ -78,7 +78,7 @@ export default defineConfig({
   build: {
     // Top-level await in src/data/remote.js.
     target: 'es2022',
-    rollupOptions: { input: ['index.html', 'editor.html', 'elements.html'] },
+    rollupOptions: { input: ['index.html', 'editor.html', 'elements.html', 'story.html'] },
   },
   plugins: [mapsApi()],
 });

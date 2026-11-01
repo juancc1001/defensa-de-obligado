@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { enemies } from '../data/enemies.js';
 import { movements } from '../movement/index.js';
 import StatusEffects from '../components/StatusEffects.js';
+import { TILE } from '../config.js';
 
 export default class Enemy extends Phaser.GameObjects.Sprite {
   // opts are passed to the movement's init, e.g. { path } for 'path' movement.
@@ -24,7 +25,7 @@ export default class Enemy extends Phaser.GameObjects.Sprite {
   }
 
   takeDamage(amount, ignoreArmor = false) {
-    if (!this.active) return;
+    if (!this.active || this.hidden) return;
     this.hp -= ignoreArmor ? amount : Math.max(1, amount - this.armor);
     if (this.hp <= 0) {
       this.scene.onEnemyKilled(this);
@@ -42,7 +43,9 @@ export default class Enemy extends Phaser.GameObjects.Sprite {
     const dt = delta / 1000;
     this.status.update(dt);
     if (!this.active) return;
-    if (this.attacking) this.scene.objective.takeDamage(this.def.damage * dt);
+    // Under a `cover` tile (Escudo) it can't be targeted or hit.
+    this.hidden = this.scene.level.coverAt(Math.floor(this.x / TILE), Math.floor(this.y / TILE));
+    if (this.attacking) this.scene.damageObjective(this.def.damage * dt);
     else this.movement.update(this, dt);
   }
 }

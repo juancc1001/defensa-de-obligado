@@ -32,7 +32,9 @@
       <p>
         <label>Ancho <input id="width" type="number" min="1" value="30" /></label>
         <label>Alto <input id="height" type="number" min="1" value="17" /></label>
+        <button id="ratio">Usar 16:9</button>
       </p>
+      <p>Tamaños: 64 × 36 mediano (nivel normal), 80 × 45 grande, 96 × 54 muy grande.</p>
       <p>
         <button id="new">Nuevo</button>
         <button id="resize">Redimensionar</button>
@@ -40,6 +42,7 @@
       </p>
       <p>Elegí un elemento y hacé clic en el mapa para colocarlo. Clic derecho quita una torre / barco / entrada / cadenas.</p>
 
+      <p><label><input id="overlay" type="checkbox" /> Superponer: el terreno va a la capa de arriba, que se ve sobre el resto y sobre los barcos. Clic derecho la borra.</label></p>
       <div id="palette"></div>
     </aside>
     <main>
