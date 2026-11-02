@@ -1,10 +1,10 @@
 import Enemy from '../entities/Enemy.js';
 
 export default class WaveManager {
-  constructor(scene, waves, paths) {
+  constructor(scene, waves, level) {
     this.scene = scene;
     this.waves = waves;
-    this.paths = paths;
+    this.level = level;
     this.index = -1;
     this.queue = [];
     this.timer = 0;
@@ -21,7 +21,7 @@ export default class WaveManager {
       this.timer += dt;
       while (this.queue.length && this.queue[0].at <= this.timer) {
         const s = this.queue.shift();
-        new Enemy(this.scene, s.enemy, { path: this.paths[s.path] });
+        new Enemy(this.scene, s.enemy, { path: this.level.path(s.path) });
       }
       return;
     }

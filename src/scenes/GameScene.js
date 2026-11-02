@@ -35,7 +35,7 @@ export default class GameScene extends Phaser.Scene {
       if (obj.type === 'tower') this.place(Tower, obj.name, Math.floor(obj.x / TILE), Math.floor(obj.y / TILE));
       if (obj.type === 'ship') this.place(Item, obj.name, Math.floor(obj.x / TILE), Math.floor(obj.y / TILE));
     }
-    this.waves = new WaveManager(this, def.waves, this.level.paths);
+    this.waves = new WaveManager(this, def.waves, this.level);
 
     this.registry.set({
       gold: def.gold,

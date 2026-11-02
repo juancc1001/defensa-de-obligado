@@ -28,36 +28,51 @@ export default class Level {
     // Pre-placed towers and ships are read by GameScene.
     this.entities = this.map.getObjectLayer('entities')?.objects ?? [];
     const chains = this.entities.filter((o) => o.type === 'objective');
+    this.spawns = {};
     if (chains.length) {
       this.objectiveRects = chains.map((c) => ({ x: c.x - TILE / 2, y: c.y - TILE / 2, width: TILE, height: TILE }));
+      this.chainCells = chains.map(cellOf);
       for (const spawn of this.entities.filter((o) => o.type === 'spawn')) {
-        this.paths[spawn.name] = this.riverRoute(cellOf(spawn), chains.map(cellOf));
+        this.spawns[spawn.name] = cellOf(spawn);
+        this.paths[spawn.name] = this.riverRoute(cellOf(spawn), this.chainCells);
       }
     } else {
       this.objectiveRects = this.map.getObjectLayer('objective').objects;
     }
   }
 
-  // Shortest route over river tiles (zone 'path') to the nearest chains, ending on the tile before them.
+  // Route for a new enemy: spawn routes are rebuilt each time so every ship takes its own line.
+  path(name) {
+    const spawn = this.spawns[name];
+    return spawn ? this.riverRoute(spawn, this.chainCells) : this.paths[name];
+  }
+
+  // Route over river tiles (zone 'path') to the chains, ending on the tile before them.
+  // Each step costs a random 1-3, so on wide stretches the route drifts between lanes instead of going straight.
   // A spawn on the map edge starts one tile outside, so enemies sail in.
   riverRoute(start, goals) {
     const key = (c) => `${c.x},${c.y}`;
     const isGoal = (c) => goals.some((g) => key(g) === key(c));
+    const cost = new Map([[key(start), 0]]);
     const prev = new Map([[key(start), null]]);
-    const queue = [start];
+    const open = [start];
     let goal = null;
-    while (queue.length) {
-      const c = queue.shift();
+    while (open.length) {
+      let i = 0;
+      for (let j = 1; j < open.length; j++) if (cost.get(key(open[j])) < cost.get(key(open[i]))) i = j;
+      const [c] = open.splice(i, 1);
       if (isGoal(c)) {
         goal = c;
         break;
       }
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const n = { x: c.x + dx, y: c.y + dy };
-        if (prev.has(key(n))) continue;
         if (!isGoal(n) && this.zoneAt(n.x, n.y) !== 'path') continue;
+        const d = cost.get(key(c)) + 1 + Math.random() * 2;
+        if (cost.has(key(n)) && cost.get(key(n)) <= d) continue;
+        if (!cost.has(key(n))) open.push(n);
+        cost.set(key(n), d);
         prev.set(key(n), c);
-        queue.push(n);
       }
     }
     if (!goal) throw new Error(`No river route from spawn at ${key(start)} to the chains`);
