@@ -42,15 +42,25 @@ export default class Level {
   }
 
   // Route for a new enemy: spawn routes are rebuilt each time so every ship takes its own line.
+  // Each ship starts on a random river tile around the spawn point, so they don't all come out of one spot.
   path(name) {
     const spawn = this.spawns[name];
-    return spawn ? this.riverRoute(spawn, this.chainCells) : this.paths[name];
+    if (!spawn) return this.paths[name];
+    const around = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const c = { x: spawn.x + dx, y: spawn.y + dy };
+        if (this.zoneAt(c.x, c.y) === 'path') around.push(c);
+      }
+    }
+    const start = around.length ? Phaser.Utils.Array.GetRandom(around) : spawn;
+    return this.riverRoute(start, this.chainCells, spawn);
   }
 
   // Route over river tiles (zone 'path') to the chains, ending on the tile before them.
   // Each step costs a random 1-3, so on wide stretches the route drifts between lanes instead of going straight.
-  // A spawn on the map edge starts one tile outside, so enemies sail in.
-  riverRoute(start, goals) {
+  // If the spawn point is on the map edge, the route starts outside the map, so enemies sail in across that edge.
+  riverRoute(start, goals, spawn = start) {
     const key = (c) => `${c.x},${c.y}`;
     const isGoal = (c) => goals.some((g) => key(g) === key(c));
     const cost = new Map([[key(start), 0]]);
@@ -79,10 +89,18 @@ export default class Level {
 
     const cells = [];
     for (let c = prev.get(key(goal)); c; c = prev.get(key(c))) cells.unshift(c);
-    if (start.x === 0) cells.unshift({ x: -1, y: start.y });
-    else if (start.x === this.map.width - 1) cells.unshift({ x: this.map.width, y: start.y });
-    else if (start.y === 0) cells.unshift({ x: start.x, y: -1 });
-    else if (start.y === this.map.height - 1) cells.unshift({ x: start.x, y: this.map.height });
+    let dir = null;
+    if (spawn.x === 0) dir = [-1, 0];
+    else if (spawn.x === this.map.width - 1) dir = [1, 0];
+    else if (spawn.y === 0) dir = [0, -1];
+    else if (spawn.y === this.map.height - 1) dir = [0, 1];
+    if (dir) {
+      let c = start;
+      do {
+        c = { x: c.x + dir[0], y: c.y + dir[1] };
+        cells.unshift(c);
+      } while (c.x >= 0 && c.y >= 0 && c.x < this.map.width && c.y < this.map.height);
+    }
 
     const center = (c) => [c.x * TILE + TILE / 2, c.y * TILE + TILE / 2];
     const path = new Phaser.Curves.Path(...center(cells[0]));
